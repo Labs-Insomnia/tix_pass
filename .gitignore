@@ -2,8 +2,6 @@
 
 .env
 
-.env.example
-
 node_modules
 
 contracts/greeting/target
