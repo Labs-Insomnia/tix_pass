@@ -5,3 +5,5 @@
 node_modules
 
 contracts/greeting/target
+
+.next
