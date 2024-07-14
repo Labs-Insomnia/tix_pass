@@ -22,3 +22,12 @@ TicketContract
 - transfer_ticket
 - validate_ticket
 
+
+
+---
+each event has its own ticket characteristics, contracts, etc.
+SQL table for all events, with a tickets for each event.
+organizers pay for creating events, and set the conditions (amount of tickets, cost of tickets, date, etc)
+there is a base template for each event written as code. we use the conditions provided by organizer, fill it as
+params in our template, compile it, and we deploy it as a contract/event. the contract will know the number of tickets, 
+and will issue the token (ticket)  to each wallet who wants to attend the event.
