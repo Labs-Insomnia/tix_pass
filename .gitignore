@@ -7,3 +7,5 @@ node_modules
 contracts/greeting/target
 
 .next
+
+contracts/tix_contract/target
