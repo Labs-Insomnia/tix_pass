@@ -12,11 +12,14 @@ pub struct Event {
     ticket_price: u64
 }
 
+const EVENT: Symbol = symbol_short!("EVENT");
+
 #[contract]
 pub struct EventContract;
 
 #[contractimpl]
 impl EventContract {
+
     pub fn init(env: Env, event: Event) {
 
     }
@@ -32,6 +35,8 @@ impl EventContract {
             ticket_price
         };
 
+        // save the event.
+        env.storage().instance().set(&EVENT, &event);
     }
 
     pub fn issue_ticket() {}
@@ -47,4 +52,12 @@ impl EventContract {
     pub fn update_event() {}
 
     pub fn cancel_event() {}
+}
+
+#[contract]
+pub struct EventToken;
+
+#[contractimpl]
+impl EventToken {
+    pub fn initialize() {}
 }
