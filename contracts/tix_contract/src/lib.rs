@@ -46,6 +46,27 @@ impl TryFromVal<Env, Val> for Event {
     }
 }
 
+impl IntoVal<Env, Val> for Ticket {
+    fn into_val(self, env: &Env) -> Val {
+        (self.ticket_id, self.owner, self.event.into_val(env), self.is_valid).into_val(env)
+    }
+}
+
+impl TryFromVal<Env, Val> for Ticket {
+    type Error = ();
+
+    fn try_from_val(env: &Env, val: &Val) -> Result<Self, Self::Error> {
+        let (ticket_id, owner, event_val, is_valid): (u32, Address, Val, bool) = val.try_into_val(env).map_err(|_| ())?;
+        let event: Event = Event::try_from_val(env, &event_val).map_err(|_| ())?;
+        Ok(Ticket {
+            ticket_id,
+            owner,
+            event,
+            is_valid,
+        })
+    }
+}
+
 #[contract]
 pub struct EventContract;
 
@@ -71,41 +92,69 @@ impl EventContract {
         env.storage().instance().set(&EVENT, &event);
     }
 
-    pub fn issue_ticket(env: Env, to: Address) -> bool {
+    pub fn issue_ticket(env: Env, to: Address) -> Result<u32, &'static str> {
         let mut event = env.storage().instance().get(&EVENT).unwrap().try_into_val(env).unwrap();
-        if event.ticket_sold < event.total_tickets {
+
+        if event.tickets_sold < event.total_tickets {
             event.tickets_sold += 1;
+            let ticket_id = event.ticket_sold; // TODO: find a better way to generate ID for ticket.
+            let ticket = Ticket {
+                ticket_id,
+                owner: to.clone(),
+                event: event.clone(),
+                is_valid: true,
+            };
+
             env.storage().instance().set(&EVENT, &event);
-            todo!();  // transfer ticket to `to`.
-            return true;
+            env.storage().instance().set(&(TICKETS, ticket_id), &ticket);
+            Ok(ticket_id)
         } else {
-            false // no more tickets to sell.
+            Err("No more tickets available")
         }
     }
 
-    pub fn buy_ticket(env: Env) {}
+    pub fn buy_ticket(env: Env, buyer: Address) -> Result<u32, &'static str> {
+        // Logic to handle buying a ticket. Is this enough?
+        Self::issue_ticket(env, buyer)
+    }
 
-    pub fn refund_ticket(env: Env, buyer: Address) -> bool {
-        // Logic to handle refund and revoke a ticket
-        let mut event: Event = env.storage().instance().get(&EVENT).unwrap();
-        if event.tickets_sold > 0 {
+    pub fn refund_ticket(env: Env, ticket_id: u32) -> bool {
+        let mut ticket: Ticket = env
+            .storage()
+            .instance()
+            .get(&(TICKETS, ticket_id))
+            .unwrap()
+            .try_into_val(env)
+            .unwrap();
+        if ticket.is_valid {
+            ticket.is_valid = false;
+            env.storage().instance().set(&(TICKETS, ticket_id), &ticket);
+            let mut event: Event = env.storage().instance().get(&EVENT).unwrap().try_into_val(env).unwrap();
             event.tickets_sold -= 1;
             env.storage().instance().set(&EVENT, &event);
-            // Logic to refund the ticket from 'buyer' address
-            true
-        } else {
-            false // No tickets to refund
-        }
-    }
-
-    pub fn transfer_ticket() {}
-
-    pub fn validate_ticket(env: Env, ticket_id: u32) -> bool {
-        let event: Event = env.storage().instance().get(&EVENT).unwrap();
-        if event.tickets_sold > 0 {
             true
         } else {
             false
+        }
+    }
+
+    pub fn transfer_ticket(env: Env, from: Address, to: Address, ticket_id: u32) -> bool {
+        let mut ticket: Ticket = env.storage().instance().get(&(TICKETS, ticket_id)).unwrap().try_into_val(env).unwrap();
+
+        if ticket.owner == from && ticket.is_valid {
+            ticket.owner = to;
+            env.storage().instance().set(&(TICKETS, ticket_id), &ticket);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn validate_ticket(env: Env, ticket_id: u32, owner: Address) -> bool {
+        let ticket: Option<Ticket> = env.storage().instance().get(&(TICKETS, ticket_id)).unwrap().try_into_val(env).ok();
+        match ticket {
+            Some(ticket) => ticket.owner == owner && ticket.is_valid,
+            None => false,
         }
     }
 
