@@ -114,36 +114,44 @@ impl EventContract {
     }
 
     pub fn buy_ticket(env: Env, buyer: Address) -> Result<u32, &'static str> {
-        // Logic to handle buying a ticket. Is this enough?
+        // TODO: Logic to handle buying a ticket. Is this enough?
         Self::issue_ticket(env, buyer)
     }
 
     pub fn refund_ticket(env: Env, ticket_id: u32) -> bool {
-        let mut ticket: Ticket = env
+        let mut env_clone = env.clone();
+        let mut ticket: Ticket = env_clone
             .storage()
             .instance()
             .get(&(TICKETS, ticket_id))
             .unwrap()
-            .try_into_val(env)
+            .try_into_val(&env)
             .unwrap();
         if ticket.is_valid {
             ticket.is_valid = false;
-            env.storage().instance().set(&(TICKETS, ticket_id), &ticket);
-            let mut event: Event = env.storage().instance().get(&EVENT).unwrap().try_into_val(env).unwrap();
+            env_clone.storage().instance().set(&(TICKETS, ticket_id), &ticket);
+            let mut event: Event = env_clone.storage().instance().get(&EVENT).unwrap().try_into_val(&env).unwrap();
             event.tickets_sold -= 1;
-            env.storage().instance().set(&EVENT, &event);
+            env_clone.storage().instance().set(&EVENT, &event);
             true
         } else {
             false
         }
     }
 
-    pub fn transfer_ticket(env: Env, from: Address, to: Address, ticket_id: u32) -> bool {
-        let mut ticket: Ticket = env.storage().instance().get(&(TICKETS, ticket_id)).unwrap().try_into_val(env).unwrap();
 
+    pub fn transfer_ticket(env: Env, from: Address, to: Address, ticket_id: u32) -> bool {
+        let mut env_clone = env.clone();
+        let mut ticket: Ticket = env_clone
+            .storage()
+            .instance()
+            .get(&(TICKETS, ticket_id))
+            .unwrap()
+            .try_into_val(&env)
+            .unwrap();
         if ticket.owner == from && ticket.is_valid {
             ticket.owner = to;
-            env.storage().instance().set(&(TICKETS, ticket_id), &ticket);
+            env_clone.storage().instance().set(&(TICKETS, ticket_id), &ticket);
             true
         } else {
             false
