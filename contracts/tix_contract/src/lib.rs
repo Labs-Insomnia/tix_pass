@@ -166,15 +166,9 @@ impl EventContract {
         }
     }
 
-    pub fn update_event(
-        env: Env,
-        event_title: Option<String>,
-        event_date: Option<String>,
-        event_location: Option<String>,
-        total_tickets: Option<u32>,
-        ticket_price: Option<u64>,
-    ) {
+    pub fn update_event(env: Env, event_title: Option<String>, event_date: Option<String>, event_location: Option<String>, total_tickets: Option<u32>, ticket_price: Option<u64>) {
         let mut event: Event = env.storage().instance().get(&EVENT).unwrap();
+
         if let Some(title) = event_title {
             event.event_title = title;
         }
